@@ -27,6 +27,8 @@ pub struct FirstPerson {
     down_key: Option<Key>,
     left_key: Option<Key>,
     right_key: Option<Key>,
+    rise_key: Option<Key>,
+    fall_key: Option<Key>,
 
     projection: Perspective3<f32>,
     proj: Matrix4<f32>,
@@ -64,6 +66,8 @@ impl FirstPerson {
             down_key: Some(Key::Down),
             left_key: Some(Key::Left),
             right_key: Some(Key::Right),
+            rise_key: Some(Key::E),
+            fall_key: Some(Key::Q),
             projection: Perspective3::new(800.0 / 600.0, fov, znear, zfar),
             proj: na::zero(),
             view: na::zero(),
@@ -195,6 +199,16 @@ impl FirstPerson {
         self.right_key
     }
 
+    /// The movement button for rise.
+    pub fn rise_key(&self) -> Option<Key> {
+        self.rise_key
+    }
+
+    /// The movement button for fall.
+    pub fn fall_key(&self) -> Option<Key> {
+        self.fall_key
+    }
+
     /// Set the movement button for up.
     /// Use None to disable movement in this direction.
     pub fn rebind_up_key(&mut self, new_key: Option<Key>) {
@@ -219,12 +233,26 @@ impl FirstPerson {
         self.right_key = new_key;
     }
 
+    /// Set the movement button for rise.
+    /// Use None to disable movement in this direction.
+    pub fn rebind_rise_key(&mut self, new_key: Option<Key>) {
+        self.rise_key = new_key;
+    }
+
+    /// Set the movement button for fall.
+    /// Use None to disable movement in this direction.
+    pub fn rebind_fall_key(&mut self, new_key: Option<Key>) {
+        self.fall_key = new_key;
+    }
+
     /// Disable the movement buttons for up, down, left and right.
     pub fn unbind_movement_keys(&mut self) {
         self.up_key = None;
         self.down_key = None;
         self.left_key = None;
         self.right_key = None;
+        self.rise_key = None;
+        self.fall_key = None;
     }
 
     #[doc(hidden)]
@@ -274,10 +302,19 @@ impl FirstPerson {
     }
 
     /// The direction this camera is being moved by the keyboard keys for a given set of key states.
-    pub fn move_dir(&self, up: bool, down: bool, right: bool, left: bool) -> Vector3<f32> {
+    pub fn move_dir(
+        &self,
+        up: bool,
+        down: bool,
+        right: bool,
+        left: bool,
+        rise: bool,
+        fall: bool,
+    ) -> Vector3<f32> {
         let t = self.observer_frame();
         let frontv = t * Vector3::z();
         let rightv = t * Vector3::x();
+        let risev = t * Vector3::y();
 
         let mut movement = na::zero::<Vector3<f32>>();
 
@@ -295,6 +332,14 @@ impl FirstPerson {
 
         if left {
             movement = movement + rightv
+        }
+
+        if rise {
+            movement = movement + risev
+        }
+
+        if fall {
+            movement = movement - risev
         }
 
         if movement.is_zero() {
@@ -333,7 +378,6 @@ impl FirstPerson {
     pub fn set_up_axis(&mut self, up_axis: Vector3<f32>) {
         self.up_axis = up_axis;
     }
-
 
     /// The camera observer local frame.
     fn observer_frame(&self) -> Isometry3<f32> {
@@ -409,7 +453,9 @@ impl Camera for FirstPerson {
         let down = check_optional_key_state(canvas, self.down_key, Action::Press);
         let right = check_optional_key_state(canvas, self.right_key, Action::Press);
         let left = check_optional_key_state(canvas, self.left_key, Action::Press);
-        let dir = self.move_dir(up, down, right, left);
+        let rise = check_optional_key_state(canvas, self.rise_key, Action::Press);
+        let fall = check_optional_key_state(canvas, self.fall_key, Action::Press);
+        let dir = self.move_dir(up, down, right, left, rise, fall);
 
         let move_amount = dir * self.move_step;
         self.translate_mut(&Translation3::from(move_amount));
