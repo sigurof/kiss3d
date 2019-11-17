@@ -167,6 +167,7 @@ pub mod builtin;
 pub mod camera;
 pub mod context;
 mod error;
+mod utils;
 pub mod event;
 pub mod light;
 pub mod loader;

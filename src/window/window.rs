@@ -20,7 +20,7 @@ use event::{Action, EventManager, Key, WindowEvent};
 use image::imageops;
 use image::{ImageBuffer, Rgb};
 use light::Light;
-use renderer::{Renderer, PointRenderer, LineRenderer};
+use renderer::{Renderer, PointRenderer, LineRenderer, TrailRenderer};
 use ncollide3d::procedural::TriMesh;
 use planar_camera::{FixedView, PlanarCamera};
 use planar_line_renderer::PlanarLineRenderer;
@@ -68,6 +68,7 @@ pub struct Window {
     background: Vector3<f32>,
     line_renderer: LineRenderer,
     planar_line_renderer: PlanarLineRenderer,
+    trail_renderer: TrailRenderer,
     point_renderer: PointRenderer,
     text_renderer: TextRenderer,
     framebuffer_manager: FramebufferManager,
@@ -187,6 +188,11 @@ impl Window {
     #[inline]
     pub fn draw_planar_line(&mut self, a: &Point2<f32>, b: &Point2<f32>, color: &Point3<f32>) {
         self.planar_line_renderer.draw_line(*a, *b, *color);
+    }
+
+    #[inline]
+    pub fn update_trail(&mut self, a: &Point3<f32>) {
+        self.trail_renderer.push(*a);
     }
 
     /// Adds a point to be drawn during the next frame.
@@ -488,6 +494,7 @@ impl Window {
             background: Vector3::new(0.0, 0.0, 0.0),
             line_renderer: LineRenderer::new(),
             planar_line_renderer: PlanarLineRenderer::new(),
+            trail_renderer: TrailRenderer::default(),
             point_renderer: PointRenderer::new(),
             text_renderer: TextRenderer::new(),
             #[cfg(feature = "conrod")]
@@ -1059,6 +1066,7 @@ impl Window {
         verify!(ctxt.clear(Context::DEPTH_BUFFER_BIT));
 
         self.line_renderer.render(pass, camera);
+        self.trail_renderer.render(pass, camera);
         self.point_renderer.render(pass, camera);
         self.scene.data_mut().render(pass, camera, &self.light_mode);
     }

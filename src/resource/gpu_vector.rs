@@ -54,6 +54,20 @@ impl<T: GLPrimitive> GPUVec<T> {
         &mut self.data
     }
 
+    /// Replaces contigious data in the gpu vector by `elements` at `index`
+    /// Also uploads those changes to the gpu.
+    pub fn replace_from(&mut self, index: usize, elements: Vec<T>) {
+        if let Some(buf) = &self.buffer {
+            let mut index = index;
+            for mut d in self.data.iter_mut() {
+                for i in 0..elements.len() - 1 {
+                    d[i] = elements[i];
+                }
+            }
+            update_buffer_sub(&elements[..], &buf.1, self.buf_type, index as u32);
+        }
+    }
+
     /// Immutably accesses the vector if it is available on RAM.
     #[inline]
     pub fn data(&self) -> &Option<Vec<T>> {
@@ -105,6 +119,11 @@ impl<T: GLPrimitive> GPUVec<T> {
         }
 
         self.trash = false;
+    }
+
+    pub fn bind_buffer(&mut self) {
+        let buffer = self.buffer.as_ref().map(|e| &e.1);
+        Context::get().bind_buffer(self.buf_type.to_gl(), buffer);
     }
 
     /// Binds this vector to the appropriate gpu array.
@@ -180,7 +199,7 @@ impl<T: Clone + GLPrimitive> GPUVec<T> {
 }
 
 /// Type of gpu buffer.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum BufferType {
     /// An array buffer bindable to a gl::ARRAY_BUFFER.
     Array,
@@ -251,6 +270,29 @@ pub fn upload_array<T: GLPrimitive>(
 //         ));
 //     }
 // }
+
+/// Updates a subsection of a buffer to the gpu.
+#[inline]
+pub fn update_buffer_sub<T: GLPrimitive>(
+    data: &[T],
+    gpu_buf: &Buffer,
+    gpu_buf_type: BufferType,
+    offset: u32,
+) {
+    unsafe {
+        let ctxt = Context::get();
+        verify!(ctxt.bind_buffer(gpu_buf_type.to_gl(), Some(gpu_buf)));
+        unsafe {
+            ctxt.buffer_sub_data(
+                gpu_buf_type.to_gl(),
+                offset,
+                data,
+            );
+        };
+        verify!(ctxt.bind_buffer(gpu_buf_type.to_gl(), None));
+    }
+}
+
 
 /// Updates a buffer to the gpu.
 ///
