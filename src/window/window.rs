@@ -7,31 +7,30 @@ use std::iter::repeat;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::mpsc::{self, Receiver};
-use std::time::Duration;
 use std::thread;
+use std::time::Duration;
 
-
+use image::{ImageBuffer, Rgb};
+use image::{GenericImage, Pixel};
+use image::imageops;
 use instant::Instant;
 use na::{Point2, Point3, Vector2, Vector3};
+use ncollide3d::procedural::TriMesh;
 
 use camera::{ArcBall, Camera};
 use context::Context;
 use event::{Action, EventManager, Key, WindowEvent};
-use image::imageops;
-use image::{ImageBuffer, Rgb};
 use light::Light;
-use renderer::{Renderer, PointRenderer, LineRenderer, TrailRenderer};
-use ncollide3d::procedural::TriMesh;
 use planar_camera::{FixedView, PlanarCamera};
 use planar_line_renderer::PlanarLineRenderer;
 use post_processing::PostProcessingEffect;
+use renderer::{LineRenderer, PointRenderer, Renderer, TrailRenderer};
+#[cfg(feature = "conrod")]
+use renderer::ConrodRenderer;
 use resource::{FramebufferManager, Mesh, PlanarMesh, RenderTarget, Texture, TextureManager};
 use scene::{PlanarSceneNode, SceneNode};
 use text::{Font, TextRenderer};
 use window::{Canvas, State};
-use image::{GenericImage, Pixel};
-#[cfg(feature = "conrod")]
-use renderer::ConrodRenderer;
 
 static DEFAULT_WIDTH: u32 = 800u32;
 static DEFAULT_HEIGHT: u32 = 600u32;
@@ -403,6 +402,10 @@ impl Window {
     /// Sets the light mode. Only one light is supported.
     pub fn set_light(&mut self, pos: Light) {
         self.light_mode = pos;
+    }
+
+    pub fn set_trail_renderer(&mut self, trail_renderer: TrailRenderer){
+        self.trail_renderer = trail_renderer;
     }
 
     /// Retrieve a mutable reference to the UI based on Conrod.
