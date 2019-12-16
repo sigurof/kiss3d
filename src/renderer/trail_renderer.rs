@@ -1,12 +1,14 @@
 //! A batched line renderer.
 
+use std::ptr;
+
+use na::{Matrix4, Point3};
+
 use camera::Camera;
 use context::Context;
-use na::{Matrix4, Point3};
-use resource::{AllocationType, BufferType, Effect, GPUVec, ShaderAttribute, ShaderUniform};
 use renderer::Renderer;
+use resource::{AllocationType, BufferType, Effect, GPUVec, ShaderAttribute, ShaderUniform};
 use utils::CyclicCounter;
-use std::ptr;
 
 #[path = "../error.rs"]
 mod error;
@@ -80,7 +82,7 @@ impl TrailRenderer {
     /// increment the index keeping track of where the newest part of the trail is
     pub fn push(&mut self, point: Point3<f32>) {
         self.vtx.replace_from(self.vtx_end.current() as usize, vec![point]);
-        let new_ebo_indices = vec![self.ebo_inds_end.peek_last() as i32, self.ebo_inds_end.current() as i32];
+        let new_ebo_indices = vec![self.vtx_end.peek_last() as i32, self.vtx_end.current() as i32];
         self.ebo_inds.replace_from(self.ebo_inds_end.current() as usize, new_ebo_indices);
         self.vtx_end.increment_one();
         self.ebo_inds_end.increment_by(2);
@@ -100,8 +102,6 @@ impl Renderer for TrailRenderer {
 
         camera.upload(pass, &mut self.proj, &mut self.view);
 
-        println!("Hey {:?}", self.ebo_inds.data());
-        println!("Hey {:?}", self.vtx.data());
 //        self.color.bind_sub_buffer(&mut self.vtx, 1, 1);
         self.pos.bind_sub_buffer(&mut self.vtx, 0, 0);
 

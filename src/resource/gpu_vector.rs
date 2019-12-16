@@ -1,6 +1,8 @@
 //! Wrapper for an OpenGL buffer object.
 
-use context::{Buffer, Context};
+use std::mem;
+
+use context::{Buffer, Context, GLsizeiptr};
 use resource::gl_primitive::GLPrimitive;
 
 #[path = "../error.rs"]
@@ -57,14 +59,22 @@ impl<T: GLPrimitive> GPUVec<T> {
     /// Replaces contigious data in the gpu vector by `elements` at `index`
     /// Also uploads those changes to the gpu.
     pub fn replace_from(&mut self, index: usize, elements: Vec<T>) {
-        if let Some(buf) = &self.buffer {
+        if let (Some(buf), Some(dat)) = (&self.buffer, &mut self.data) {
             let mut index = index;
-            for mut d in self.data.iter_mut() {
-                for i in 0..elements.len() - 1 {
-                    d[i] = elements[i];
-                }
+            let datalength = dat.len();
+            for i in 0..elements.len() {
+                dat[index + i] = elements[i];
             }
-            update_buffer_sub(&elements[..], &buf.1, self.buf_type, index as u32);
+
+            let num_from_zero = (index + elements.len()) as isize - dat.len() as isize;
+            let range1 = 0..(isize::max(0, num_from_zero) as usize);
+            let range2 = index..usize::min(dat.len(), index + elements.len());
+            if num_from_zero > 0 {
+                update_buffer_sub(&elements[range1], &buf.1, self.buf_type, 0 as u32);
+                update_buffer_sub(&elements[range2], &buf.1, self.buf_type, index as u32);
+            } else {
+                update_buffer_sub(&elements[..], &buf.1, self.buf_type, index as u32);
+            }
         }
     }
 
@@ -285,7 +295,7 @@ pub fn update_buffer_sub<T: GLPrimitive>(
         unsafe {
             ctxt.buffer_sub_data(
                 gpu_buf_type.to_gl(),
-                offset,
+                offset * mem::size_of::<T>() as u32 ,
                 data,
             );
         };
